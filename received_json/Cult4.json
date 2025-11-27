@@ -1,0 +1,75 @@
+{
+  "phase": "turn_start",
+  "player_hp": 81,
+  "block": 0,
+  "energy": 3,
+  "hand": [
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    }
+  ],
+  "draw_pile": [],
+  "discard_pile": [
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Bash"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    }
+  ],
+  "relics": [
+    "Burning Blood"
+  ],
+  "powers": [],
+  "enemies": [
+    {
+      "intentHits": 1,
+      "hp": 14,
+      "block": 0,
+      "id": "Cultist",
+      "intentDamage": 12,
+      "powers": [
+        {
+          "name": "Ritual",
+          "amount": 3
+        },
+        {
+          "name": "Strength",
+          "amount": 6
+        }
+      ],
+      "intent": "ATTACK"
+    }
+  ]
+}

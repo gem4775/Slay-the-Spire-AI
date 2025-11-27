@@ -1,0 +1,67 @@
+{
+  "phase": "battle_start",
+  "player_hp": 80,
+  "block": 0,
+  "energy": 3,
+  "hand": [
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    }
+  ],
+  "draw_pile": [
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Bash"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    }
+  ],
+  "discard_pile": [],
+  "relics": [
+    "Burning Blood",
+    "NeowsBlessing"
+  ],
+  "powers": [],
+  "enemies": [
+    {
+      "intentHits": 1,
+      "hp": 1,
+      "block": 0,
+      "id": "Cultist",
+      "intentDamage": -1,
+      "powers": [],
+      "intent": "BUFF"
+    }
+  ]
+}

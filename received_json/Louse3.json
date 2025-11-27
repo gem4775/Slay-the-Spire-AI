@@ -1,0 +1,85 @@
+{
+  "phase": "turn_start",
+  "player_hp": 81,
+  "block": 0,
+  "energy": 3,
+  "hand": [
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    }
+  ],
+  "draw_pile": [
+    {
+      "upgraded": false,
+      "id": "Bash"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Strike_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    },
+    {
+      "upgraded": false,
+      "id": "Defend_R"
+    }
+  ],
+  "discard_pile": [],
+  "relics": [
+    "Burning Blood"
+  ],
+  "powers": [
+    {
+      "name": "Weakened",
+      "amount": 2
+    }
+  ],
+  "enemies": [
+    {
+      "intentHits": 1,
+      "hp": 0,
+      "block": 0,
+      "id": "FuzzyLouseNormal",
+      "intentDamage": 6,
+      "powers": [],
+      "intent": "ATTACK"
+    },
+    {
+      "intentHits": 1,
+      "hp": 3,
+      "block": 0,
+      "id": "FuzzyLouseDefensive",
+      "intentDamage": 7,
+      "powers": [
+        {
+          "name": "Vulnerable",
+          "amount": 1
+        }
+      ],
+      "intent": "ATTACK"
+    }
+  ]
+}
