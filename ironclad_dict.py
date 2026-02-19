@@ -6,10 +6,8 @@ TYPE_POWER  = 2
 TYPE_STATUS = 3
 TYPE_CURSE  = 4
 
-# Target types
-TARGET_ENEMY  = 0
-TARGET_ALL    = 1
-TARGET_SELF   = 2
+VECTOR_LENGTH = 13   #Change based on what we are testing
+
 
 
 
@@ -24,7 +22,9 @@ CARD_LIBRARY = {
         "weak": 0,
         "draw": 0,
         "attack_num": 1,
-        "target": TARGET_ALL,
+        "target_self": 0,
+        "target_single": 1,
+        "target_all": 0,
         "special": {}
     },
 
@@ -38,12 +38,14 @@ CARD_LIBRARY = {
         "weak": 0,
         "draw": 0,
         "attack_num": 0,
-        "target": TARGET_ALL,
+        "target_self": 1,
+        "target_single": 0,
+        "target_all": 0,
         "special": {}
     },
 
     "Bash": {
-        "type": TYPE_POWER,
+        "type": TYPE_ATTACK,
         "cost": 2,
         "damage": 8,
         "block": 0,
@@ -52,9 +54,28 @@ CARD_LIBRARY = {
         "weak": 0,
         "draw": 0,
         "attack_num": 1,
-        "target": TARGET_ENEMY,
+        "target_self": 0,
+        "target_single": 1,
+        "target_all": 0,
+        "special": {}
+    },
+
+    "Iron_Wave": {
+        "type": TYPE_ATTACK,
+        "cost": 1,
+        "damage": 5,
+        "block": 5,
+        "self_hp_change": 0,
+        "vulnerable": 0,
+        "weak": 0,
+        "draw": 0,
+        "attack_num": 1,
+        "target_single": 1,
+        "target_all": 0,
+        "target_self": 0,
         "special": {}
     }
+
 }
 
 UPGRADES = {
