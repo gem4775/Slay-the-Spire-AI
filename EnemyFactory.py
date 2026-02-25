@@ -27,6 +27,11 @@ class EnemyFactory:
             'ritual': 0,
         }
         return monster
+    @staticmethod
+    def dummy_monster():
+        monster = EnemyFactory.empty_monster()
+        monster.update(EnemyFactory.empty_intent())
+        return monster
 
     @staticmethod
     def create_jaw_worm():

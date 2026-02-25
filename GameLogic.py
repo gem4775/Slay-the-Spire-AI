@@ -148,31 +148,34 @@ class GameLogic:
         ]
 
         # Enemy (3 features for Jaw Worm)
-        jaw_worm = enemies[0]
+        enemy = enemies[0]
         enemy_features = [
-            jaw_worm['hp'] / 44,  # Jaw Worm max HP
-            jaw_worm.get('strength', 0) / 10,
-            jaw_worm['intentDamage'] / 15,  # upcoming damage
-            jaw_worm.get('vulnerable', 0) / 5,
-            jaw_worm.get('is_vulnerable', 0),
-            1.0 if jaw_worm.get('intent') == 'ATTACK' else 0.0,
-            jaw_worm.get('block_gain', 0) / 10,
-            jaw_worm.get('strength_gain', 0) /5,
-            jaw_worm.get('block', 0) / 10,
-            jaw_worm.get('ritual_gain', 0) / 3,
-            jaw_worm.get('ritual', 0) / 3,
+            enemy.get('hp', 0) / enemy.get('max_hp', 40),
+            enemy.get('max_hp', 40) / 100,
+            enemy.get('strength', 0) / 10,
+            enemy.get('intentDamage', 0) / 15,  # upcoming damage
+            enemy.get('vulnerable', 0) / 5,
+            enemy.get('intentHits', 0) / 1,
+            enemy.get('is_vulnerable', 0),
+            1.0 if enemy.get('intent') == 'ATTACK' else 0.0,
+            enemy.get('block_gain', 0) / 10,
+            enemy.get('strength_gain', 0) /5,
+            enemy.get('block', 0) / 10,
+            enemy.get('ritual_gain', 0) / 3,
+            enemy.get('ritual', 0) / 3,
         ]
 
-        # Hand encoding (10 cards max × 3 features = 30)
+
         hand_features = []
+        dummy_card_size = len(GameLogic.encode_card({}))
+
         for i in range(10):
             if i < len(hand):
                 card = hand[i]
                 card_vec = GameLogic.encode_card(GameLogic.vectorize_card(card['name']))
-                # Just take cost, damage, block for simplicity
-                hand_features.extend([card_vec[0], card_vec[1], card_vec[2], card_vec[4]])
+                hand_features.extend(card_vec)
             else:
-                hand_features.extend([0, 0, 0, 0])  # padding
+                hand_features.extend([0] * dummy_card_size)
 
         return np.array(player_features + enemy_features + hand_features, dtype=np.float32)
 

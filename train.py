@@ -7,6 +7,12 @@ import numpy as np
 from GameLogic import GameLogic
 from EnemyFactory import EnemyFactory
 
+MAX_MONSTERS = 5
+MONSTER_LENGTH = len(EnemyFactory.dummy_monster())
+CARD_LENGTH = len(GameLogic.encode_card({}))
+PLAYER_LENGTH = 3 # Actually Encode later
+DIMENSIONS = CARD_LENGTH * 10 + PLAYER_LENGTH + MONSTER_LENGTH - 1
+
 
 # 1. Neural Network
 class DQN(nn.Module):
@@ -110,7 +116,8 @@ class DQNAgent:
 
 # 4. Training Loop Skeleton
 def train():
-    agent = DQNAgent(state_dim=54, action_dim=11)
+
+    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=11)
     recent_rewards = deque(maxlen=100)
 
     for episode in range(3000):
@@ -184,7 +191,7 @@ def train():
 
 def play_trained_agent(Think = False):
     # Load the trained model
-    agent = DQNAgent(state_dim=54, action_dim=11)
+    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=11)
     agent.policy_net.load_state_dict(torch.load("trained_model.pth"))
     agent.policy_net.eval()
     agent.epsilon = 0.0
@@ -214,6 +221,7 @@ def play_trained_agent(Think = False):
     enemies = [EnemyFactory.create_cultist()]
     state = GameLogic.encode_state(player_state, enemies, hand)
 
+
     done = False
     step_num = 0
     if Think:
@@ -236,8 +244,6 @@ def play_trained_agent(Think = False):
         legal_actions = GameLogic.get_legal_actions(vector, enemies)
         if Think:
             print(f"Legal actions: {legal_actions}")
-
-            # Add this inside the while loop, before selecting action:
             with torch.no_grad():
                 state_t = torch.FloatTensor(state).unsqueeze(0)
                 q_values = agent.policy_net(state_t).squeeze().numpy()
