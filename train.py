@@ -18,14 +18,40 @@ DIMENSIONS = PLAYER_LENGTH + MAX_MONSTERS * ENEMY_FEATURES + CARD_LENGTH * 10
 #10 card hand * # of targets + self/AoE + end turn
 ACTION_DIM = 10 * MAX_MONSTERS + 11  # = 61 for MAX_MONSTERS=5
 
+ENCOUNTERS = [
+    (34, lambda: [EnemyFactory.create_jaw_worm()]),
+    (33, lambda: [EnemyFactory.create_cultist()]),
+    (33, lambda: [EnemyFactory.create('Louse'), EnemyFactory.create('Louse')]),
+]
+
+def sample_encounter():
+    weights = [w for w, _ in ENCOUNTERS]
+    fns     = [fn for _, fn in ENCOUNTERS]
+    return random.choices(fns, weights=weights, k=1)[0]()
+
+def shuffle_enemies(enemies):
+    """
+    Pad enemies list to MAX_MONSTERS with dead placeholders, then shuffle.
+    Forces the agent to learn targeting by slot position rather than always
+    assuming slot 0 is the only live enemy.
+    """
+    dead = EnemyFactory.dummy_monster()  # hp=0, all zeros when encoded
+    padded = enemies + [dead] * (MAX_MONSTERS - len(enemies))
+    random.shuffle(padded)
+    return padded
+
 # 1. Neural Network
 class DQN(nn.Module):
     def __init__(self, state_dim=36, action_dim=11):
         super().__init__()
         self.net = nn.Sequential(
-            nn.Linear(state_dim, 128),
+            nn.Linear(state_dim, 256),
+            nn.LayerNorm(256),
             nn.ReLU(),
-            nn.Linear(128, 128),
+            nn.Linear(256, 256),
+            nn.LayerNorm(256),
+            nn.ReLU(),
+            nn.Linear(256, 128),
             nn.ReLU(),
             nn.Linear(128, action_dim)
         )
@@ -54,7 +80,7 @@ class ReplayBuffer:
 
 # 3. Agent
 class DQNAgent:
-    def __init__(self, state_dim=36, action_dim=11, lr=0.001):
+    def __init__(self, state_dim=36, action_dim=11, lr=0.0001):
         self.policy_net = DQN(state_dim, action_dim)
         self.target_net = DQN(state_dim, action_dim)
         self.target_net.load_state_dict(self.policy_net.state_dict())
@@ -65,7 +91,7 @@ class DQNAgent:
         self.epsilon = 1.0
         self.epsilon_decay = 0.9995
         self.epsilon_min = 0.01
-        self.gamma = 0.95
+        self.gamma = 0.85
         self.batch_size = 256
 
     def select_action(self, state, legal_actions):
@@ -107,9 +133,10 @@ class DQNAgent:
             target_q = rewards + (1 - dones) * self.gamma * max_next_q
 
         # Loss and backprop
-        loss = nn.MSELoss()(current_q, target_q)
+        loss = nn.SmoothL1Loss()(current_q, target_q)
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=10)
         self.optimizer.step()
 
         return loss.item()
@@ -142,10 +169,9 @@ def train():
             "discard_pile": []
         }
 
-        if random.choice([True, False]):
-            enemies = [EnemyFactory.create_jaw_worm()]
-        else:
-            enemies = [EnemyFactory.create_cultist()]
+        enemies = sample_encounter()
+
+        enemies = shuffle_enemies(enemies)
 
         state = GameLogic.encode_state(player_state, enemies, hand)
 
@@ -169,7 +195,7 @@ def train():
 
         agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
 
-        if episode % 20 == 0:
+        if episode % 100 == 0:
             agent.update_target_network()
 
         recent_rewards.append(total_reward)
@@ -225,7 +251,7 @@ def play_trained_agent(Think=False):
         "discard_pile": []
     }
 
-    enemies = [EnemyFactory.create_cultist()]
+    enemies = sample_encounter()
     state = GameLogic.encode_state(player_state, enemies, hand)
 
     done = False
@@ -298,10 +324,5 @@ def play_trained_agent(Think=False):
 
 
 if __name__ == "__main__":
-    train()
+    #train()
     play_trained_agent(Think=True)
-    # hp = []
-    # for i in range(10):
-    #     hp.append(50 - play_trained_agent())
-    # print(hp)
-    # print(sum(hp)/len(hp))

@@ -246,7 +246,7 @@ class GameLogic:
 
     @staticmethod
     def calculate_reward(action, card_data, player_state_before, player_state_after,
-                         enemies_before, enemies_after, done, max_enemies=5):
+                         enemies_before, enemies_after, done, max_enemies=5, vector=None):
         """
         Calculate reward for a single step.
         Tune all reward weights here.
@@ -259,7 +259,7 @@ class GameLogic:
         DAMAGE_TAKEN_PENALTY = 1.0
         WASTED_ENERGY_PENALTY = 3.0
         VULNERABLE_WASTE_PENALTY = 3.0
-        WASTED_BLOCK_PENALTY = 4.0
+        WASTED_BLOCK_PENALTY = 10.0
         WIN_REWARD = 50
         LOSS_PENALTY = 50
         ENEMY_SURVIVED_TURN_PENALTY = 1.0
@@ -285,15 +285,21 @@ class GameLogic:
                 enemy_killed = True
                 reward += 50  # kill bonus per enemy
 
-        # Scale damage reward — must happen BEFORE reward += total_damage_dealt * DAMAGE_REWARD
-        first_live = next((e for e in enemies_before if e['hp'] > 0), None)
-        if first_live:
-            if first_live['hp'] <= 20:
-                DAMAGE_REWARD += 3.0
-            if first_live['hp'] <= 10:
-                DAMAGE_REWARD += 3.0  # extra urgency when nearly dead
-            if first_live.get('intent') == 'OTHER':
-                DAMAGE_REWARD *= 2.0
+        # Aggregate live enemy info for reward shaping
+        live_enemies_before = [e for e in enemies_before if e['hp'] > 0]
+        first_live = live_enemies_before[0] if live_enemies_before else None
+        any_attacking = any(e.get('intent') == 'ATTACK' for e in live_enemies_before)
+        all_buffing = all(e.get('intent') == 'OTHER' for e in live_enemies_before) and len(live_enemies_before) > 0
+        any_killable = any(e['hp'] <= 10 for e in live_enemies_before)
+        any_low = any(e['hp'] <= 20 for e in live_enemies_before)
+
+        # Scale damage reward
+        if any_low:
+            DAMAGE_REWARD += 3.0
+        if any_killable:
+            DAMAGE_REWARD += 3.0
+        if all_buffing:
+            DAMAGE_REWARD *= 3.0
 
         reward += total_damage_dealt * DAMAGE_REWARD
 
@@ -319,14 +325,10 @@ class GameLogic:
         if card_data and not enemy_killed:
             block_gained = card_data.get('block', 0)
             if block_gained > 0:
-                enemy_intent = next(
-                    (e.get('intent') for e in enemies_before if e['hp'] > 0), None
-                )
-                has_lethal = first_live and first_live['hp'] <= 10
-                if has_lethal:
+                if any_killable:
                     if card_data.get('damage', 0) == 0:
                         reward -= WASTED_BLOCK_PENALTY * 3.0
-                elif enemy_intent == 'ATTACK':
+                elif any_attacking:
                     reward += block_gained * BLOCK_REWARD
                 else:
                     if card_data.get('damage', 0) == 0:
@@ -349,7 +351,13 @@ class GameLogic:
 
             wasted_energy = player_state_before.get('energy', 0)
             if wasted_energy > 0:
-                reward -= wasted_energy * WASTED_ENERGY_PENALTY
+                playable = vector is not None and any(
+                    player_state_before['energy'] >= GameLogic.vectorize_card(c['name'])['cost']
+                    for c in vector.get('hand', [])
+                )
+                if playable:
+                    reward -= wasted_energy * WASTED_ENERGY_PENALTY * 3.0
+                # no penalty if nothing was playable — end turn was forced
 
         # Terminal rewards
         if done:
@@ -468,6 +476,7 @@ class GameLogic:
             enemies_before=enemies_before,
             enemies_after=enemies,
             done=done,
+            vector=vector,
         )
 
         return next_vector, enemies, reward, done

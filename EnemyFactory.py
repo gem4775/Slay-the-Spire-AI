@@ -182,6 +182,42 @@ class EnemyFactory:
             chosen  = random.choices(fns, weights=weights, k=1)[0]
             return chosen(enemy)
 
+    @staticmethod
+    def test_monster(hp=20, max_hp=20, intent='ATTACK', damage=8,
+                     strength=0, block=0, name='TestEnemy'):
+        """Generic test monster with fully specified state."""
+        m = EnemyFactory.empty_monster()
+        m.update(EnemyFactory.empty_intent())
+        m['name'] = name
+        m['hp'] = hp
+        m['max_hp'] = max_hp
+        m['strength'] = strength
+        m['block'] = block
+        m['intent'] = intent
+        m['intentDamage'] = damage if intent == 'ATTACK' else 0
+        m['intentHits'] = 1 if intent == 'ATTACK' else 0
+        return m
+
+    @staticmethod
+    def test_attacker(hp=20, damage=8, strength=0):
+        """Enemy that is about to attack."""
+        return EnemyFactory.test_monster(hp=hp, max_hp=hp, intent='ATTACK',
+                                         damage=damage, strength=strength,
+                                         name='TestAttacker')
+
+    @staticmethod
+    def test_buffer(hp=20, strength_gain=3):
+        """Enemy with OTHER intent (buffing, not attacking)."""
+        m = EnemyFactory.test_monster(hp=hp, max_hp=hp, intent='OTHER',
+                                      damage=0, name='TestBuffer')
+        m['strength_gain'] = strength_gain
+        return m
+
+    @staticmethod
+    def test_dying(hp=3, damage=8):
+        """Low-HP enemy that is about to attack — should be finished off."""
+        return EnemyFactory.test_monster(hp=hp, max_hp=20, intent='ATTACK',
+                                         damage=damage, name='TestDying')
     # -- Convenience shorthands (keep old call sites working) ----------------
 
     @staticmethod
