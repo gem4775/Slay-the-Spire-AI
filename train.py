@@ -8,11 +8,15 @@ from GameLogic import GameLogic
 from EnemyFactory import EnemyFactory
 
 MAX_MONSTERS = 5
-MONSTER_LENGTH = len(EnemyFactory.dummy_monster())
 CARD_LENGTH = len(GameLogic.encode_card({}))
-PLAYER_LENGTH = 3 # Actually Encode later
-DIMENSIONS = CARD_LENGTH * 10 + PLAYER_LENGTH + MONSTER_LENGTH - 1
+PLAYER_LENGTH = 3
+ENEMY_FEATURES = len(GameLogic.encode_enemy(EnemyFactory.dummy_monster()))
 
+# State: player + (MAX_MONSTERS * ENEMY_FEATURES) + (10 cards * CARD_LENGTH)
+DIMENSIONS = PLAYER_LENGTH + MAX_MONSTERS * ENEMY_FEATURES + CARD_LENGTH * 10
+
+#10 card hand * # of targets + self/AoE + end turn
+ACTION_DIM = 10 * MAX_MONSTERS + 11  # = 61 for MAX_MONSTERS=5
 
 # 1. Neural Network
 class DQN(nn.Module):
@@ -117,17 +121,15 @@ class DQNAgent:
 # 4. Training Loop Skeleton
 def train():
 
-    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=11)
+    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=ACTION_DIM)
     recent_rewards = deque(maxlen=100)
 
     for episode in range(3000):
-        # Load initial state from your save file
         player_state = {"player_hp": 50, "block": 0, "energy": 3}
 
         cards = [{'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'},{'name': 'Strike_R'},
                  {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'},{'name': 'Bash'},
                  {'name': 'Iron_Wave'}]
-
 
         hand = random.sample(cards, 5)
         draw = random.sample(cards, 6)
@@ -139,11 +141,11 @@ def train():
             "draw_pile": draw,
             "discard_pile": []
         }
+
         if random.choice([True, False]):
             enemies = [EnemyFactory.create_jaw_worm()]
         else:
             enemies = [EnemyFactory.create_cultist()]
-
 
         state = GameLogic.encode_state(player_state, enemies, hand)
 
@@ -151,20 +153,13 @@ def train():
         done = False
 
         while not done:
-            # Get legal actions (playable cards + end turn)
             legal_actions = GameLogic.get_legal_actions(vector, enemies)
-
-            # Agent picks action
             action = agent.select_action(state, legal_actions)
 
-            # Apply action to game state
             next_vector, next_enemies, reward, done = GameLogic.step(vector, enemies, action)
-            next_state = GameLogic.encode_state(next_vector, next_enemies, random.sample(hand, 5))
+            next_state = GameLogic.encode_state(next_vector, next_enemies, next_vector['hand'])
 
-            # Store transition
             agent.memory.push(state, action, reward, next_state, done)
-
-            # Train
             loss = agent.train_step()
 
             state = next_state
@@ -172,10 +167,8 @@ def train():
             enemies = next_enemies
             total_reward += reward
 
-        # Decay exploration
         agent.epsilon = max(agent.epsilon_min, agent.epsilon * agent.epsilon_decay)
 
-        # Update target network every 20 episodes
         if episode % 20 == 0:
             agent.update_target_network()
 
@@ -184,19 +177,33 @@ def train():
         if episode % 100 == 0:
             avg_reward = sum(recent_rewards) / len(recent_rewards)
             print(f"Episode {episode}, Last reward: {total_reward:.2f}, Avg last 100: {avg_reward:.2f}, Epsilon: {agent.epsilon:.3f}")
-        # Save the trained model after training
+
     torch.save(agent.policy_net.state_dict(), "trained_model.pth")
     print("Model saved!")
 
 
-def play_trained_agent(Think = False):
-    # Load the trained model
-    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=11)
+def _describe_action(action, vector, enemies):
+    """Return a human-readable string for a given action index."""
+    action_type, card_idx, enemy_idx = GameLogic.decode_action(action, MAX_MONSTERS)
+    end_turn_action = 10 * MAX_MONSTERS + 10
+
+    if action_type == 'end_turn':
+        return f"END TURN (action {action})"
+    elif action_type == 'single':
+        card_name = vector['hand'][card_idx]['name'] if card_idx < len(vector['hand']) else '?'
+        target_name = enemies[enemy_idx]['name'] if enemy_idx < len(enemies) else '?'
+        return f"Play {card_name} → {target_name} [card={card_idx}, enemy={enemy_idx}] (action {action})"
+    else:
+        card_name = vector['hand'][card_idx]['name'] if card_idx < len(vector['hand']) else '?'
+        return f"Play {card_name} (AoE/self) [card={card_idx}] (action {action})"
+
+
+def play_trained_agent(Think=False):
+    agent = DQNAgent(state_dim=DIMENSIONS, action_dim=ACTION_DIM)
     agent.policy_net.load_state_dict(torch.load("trained_model.pth"))
     agent.policy_net.eval()
     agent.epsilon = 0.0
 
-    # Set up initial game state
     player_state = {"player_hp": 50, "block": 0, "energy": 3}
 
     cards = [{'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'},
@@ -221,15 +228,16 @@ def play_trained_agent(Think = False):
     enemies = [EnemyFactory.create_cultist()]
     state = GameLogic.encode_state(player_state, enemies, hand)
 
-
     done = False
     step_num = 0
+
     if Think:
         print("=" * 60)
         print("GAME START")
         print("=" * 60)
         print(f"Player HP: {vector['player_hp']}")
-        print(f"Enemy HP: {enemies[0]['hp']}")
+        for i, e in enumerate(enemies):
+            print(f"Enemy {i} ({e['name']}): HP={e['hp']}")
         print(f"Starting hand: {[c['name'] for c in vector['hand']]}")
         print()
 
@@ -237,43 +245,33 @@ def play_trained_agent(Think = False):
         if Think:
             print(f"\n--- Step {step_num} ---")
             print(f"Player: HP={vector['player_hp']}, Block={vector['block']}, Energy={vector['energy']}")
-            print(f"Enemy: HP={enemies[0]['hp']}, Intent Damage={enemies[0].get('intentDamage', 0)}")
+            for i, e in enumerate(enemies):
+                print(f"Enemy {i} ({e['name']}): HP={e['hp']}, Intent={e.get('intent')}, Damage={e.get('intentDamage', 0)}")
             print(f"Hand: {[c['name'] for c in vector['hand']]}")
 
-        # Show legal actions
         legal_actions = GameLogic.get_legal_actions(vector, enemies)
+
         if Think:
-            print(f"Legal actions: {legal_actions}")
             with torch.no_grad():
                 state_t = torch.FloatTensor(state).unsqueeze(0)
                 q_values = agent.policy_net(state_t).squeeze().numpy()
 
-                # Create masked version for display
-                masked_q_values = np.full_like(q_values, float('nan'))
-                masked_q_values[legal_actions] = q_values[legal_actions]
+            print("Q-values for legal actions:")
+            for a in legal_actions:
+                desc = _describe_action(a, vector, enemies)
+                print(f"  {desc}: {q_values[a]:.3f}")
+            best = legal_actions[np.argmax(q_values[legal_actions])]
+            print(f"  → Best: {q_values[best]:.3f}")
 
-                print(f"Q-values for legal actions only:")
-                for action in legal_actions:
-                    if action == 10:
-                        print(f"  Action {action} (END TURN): {q_values[action]:.3f}")
-                    else:
-                        card_name = vector['hand'][action]['name']
-                        print(f"  Action {action} ({card_name}): {q_values[action]:.3f}")
-                print(
-                    f"  → Highest Q-value: action {legal_actions[np.argmax(q_values[legal_actions])]} = {q_values[legal_actions].max():.3f}")
-        # Agent picks action
         action = agent.select_action(state, legal_actions)
+
         if Think:
-            # Show what was chosen
-            if action == 10:
-                print(f">>> Agent chose: END TURN (action {action})")
-            else:
-                card_name = vector['hand'][action]['name']
-                card_data = GameLogic.vectorize_card(card_name)
-                print(f">>> Agent chose: Play {card_name} (action {action})")
+            print(f">>> Agent chose: {_describe_action(action, vector, enemies)}")
+            action_type, card_idx, enemy_idx = GameLogic.decode_action(action, MAX_MONSTERS)
+            if action_type in ('single', 'multi') and card_idx < len(vector['hand']):
+                card_data = GameLogic.vectorize_card(vector['hand'][card_idx]['name'])
                 print(f"    Cost: {card_data['cost']}, Damage: {card_data['damage']}, Block: {card_data['block']}")
 
-        # Apply action
         next_vector, next_enemies, reward, done = GameLogic.step(vector, enemies, action)
         next_state = GameLogic.encode_state(next_vector, next_enemies, next_vector['hand'])
 
@@ -284,6 +282,7 @@ def play_trained_agent(Think = False):
         vector = next_vector
         enemies = next_enemies
         step_num += 1
+
     if Think:
         print("\n" + "=" * 60)
         if vector['player_hp'] > 0:
@@ -291,17 +290,18 @@ def play_trained_agent(Think = False):
         else:
             print("AGENT LOST!")
         print(f"Final Player HP: {vector['player_hp']}")
-        print(f"Final Enemy HP: {enemies[0]['hp']}")
+        for i, e in enumerate(enemies):
+            print(f"Final Enemy {i} ({e['name']}) HP: {e['hp']}")
         print("=" * 60)
+
     return vector['player_hp']
 
 
-
 if __name__ == "__main__":
-    #train()
+    train()
     play_trained_agent(Think=True)
-    hp = []
-    for i in range(10):
-        hp.append(50 - play_trained_agent())
-    print(hp)
-    print(sum(hp)/len(hp))
+    # hp = []
+    # for i in range(10):
+    #     hp.append(50 - play_trained_agent())
+    # print(hp)
+    # print(sum(hp)/len(hp))
