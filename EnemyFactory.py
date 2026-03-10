@@ -51,7 +51,7 @@ ENEMY_REGISTRY = {
             # (weight, move_fn)
             (45, lambda e: attack(11 + e.get('strength', 0))),                          # Chomp
             (30, lambda e: attack(7  + e.get('strength', 0), block_gain=5)),             # Thrash
-            (25, lambda e: buff(strength_gain=random.randint(3, 5))),                    # Bellow
+            (25, lambda e: buff(strength_gain=3, block_gain=6)),                    # Bellow
         ],
     },
 
@@ -67,7 +67,7 @@ ENEMY_REGISTRY = {
 
     'Louse': {
         'hp': (10, 15),  # range 10–15
-        'stats': {},
+        'stats': {'curl': random.randint(3, 7)},
         'move_pattern': 'random',
         'moves': [
             (75, lambda e: attack(5 + e.get('strength', 0))),
@@ -101,7 +101,7 @@ class EnemyFactory:
         return {
             'name': 'ERR',
             'hp': 0,
-            'max_hp': 1,
+            'max_hp': 0,
             'strength': 0,
             'block': 0,
             'vulnerable': 0,
