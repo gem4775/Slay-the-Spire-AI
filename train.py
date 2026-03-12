@@ -4,6 +4,8 @@ import torch.optim as optim
 import random
 from collections import deque
 import numpy as np
+from numpy.ma.extras import average
+import ironclad_dict
 from GameLogic import GameLogic
 from EnemyFactory import EnemyFactory
 
@@ -40,6 +42,20 @@ def shuffle_enemies(enemies):
     random.shuffle(padded)
     return padded
 
+#Get a deck that may occur in the early floors 0-7
+def get_early_deck():
+    starter_deck = [{'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'},
+     {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Bash'}]
+
+    eligible_keys = list(ironclad_dict.CARD_LIBRARY.keys())[3:]
+
+    num_cards = random.randint(1, 3)
+    selected_keys = random.sample(eligible_keys, min(num_cards, len(eligible_keys)))
+    starter_deck.extend([{'name': key} for key in selected_keys])
+
+
+    return starter_deck
+
 # 1. Neural Network
 class DQN(nn.Module):
     def __init__(self, state_dim=36, action_dim=11):
@@ -65,7 +81,11 @@ class ReplayBuffer:
     def __init__(self, capacity=50000):
         self.buffer = deque(maxlen=capacity)
 
-    def push(self, state, action, reward, next_state, done):
+    def push(self, state, action, reward, next_state, done, is_aoe=False):
+        if is_aoe:
+            # Add AoE experiences multiple times to balance training frequency
+            for _ in range(4):
+                self.buffer.append((state, action, reward, next_state, done))
         self.buffer.append((state, action, reward, next_state, done))
 
     def sample(self, batch_size):
@@ -91,7 +111,7 @@ class DQNAgent:
         self.epsilon = 1.0
         self.epsilon_decay = 0.9995
         self.epsilon_min = 0.01
-        self.gamma = 0.85
+        self.gamma = 0.9
         self.batch_size = 256
 
     def select_action(self, state, legal_actions):
@@ -152,11 +172,8 @@ def train():
     recent_rewards = deque(maxlen=100)
 
     for episode in range(3000):
-        player_state = {"player_hp": 50, "block": 0, "energy": 3}
 
-        cards = [{'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'},{'name': 'Strike_R'},
-                 {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'}, {'name': 'Defend_R'},{'name': 'Bash'},
-                 {'name': 'Iron_Wave'}]
+        cards = get_early_deck()
 
         hand = random.sample(cards, 5)
         draw = random.sample(cards, 6)
@@ -173,7 +190,7 @@ def train():
 
         enemies = shuffle_enemies(enemies)
 
-        state = GameLogic.encode_state(player_state, enemies, hand)
+        state = GameLogic.encode_state(vector, enemies, hand)
 
         total_reward = 0
         done = False
@@ -185,7 +202,8 @@ def train():
             next_vector, next_enemies, reward, done = GameLogic.step(vector, enemies, action)
             next_state = GameLogic.encode_state(next_vector, next_enemies, next_vector['hand'])
 
-            agent.memory.push(state, action, reward, next_state, done)
+            action_type, _, _ = GameLogic.decode_action(action, MAX_MONSTERS)
+            agent.memory.push(state, action, reward, next_state, done, is_aoe=(action_type == 'multi'))
             loss = agent.train_step()
 
             state = next_state
@@ -232,12 +250,7 @@ def play_trained_agent(Think=False):
 
     player_state = {"player_hp": 50, "block": 0, "energy": 3}
 
-    cards = [{'name': 'Strike_R'}, {'name': 'Strike_R'}, {'name': 'Strike_R'},
-             {'name': 'Strike_R'}, {'name': 'Strike_R'},
-             {'name': 'Defend_R'}, {'name': 'Defend_R'},
-             {'name': 'Defend_R'}, {'name': 'Defend_R'},
-             {'name': 'Bash'},
-             {'name': 'Iron_Wave'}]
+    cards = get_early_deck()
 
     hand = random.sample(cards, 5)
     remaining = [c for c in cards if c not in hand]
@@ -325,4 +338,8 @@ def play_trained_agent(Think=False):
 
 if __name__ == "__main__":
     #train()
-    play_trained_agent(Think=True)
+    #play_trained_agent(Think=True)
+    hp = []
+    for i in range(100):
+        hp.append(play_trained_agent(Think=False))
+    print(50 - average(hp))

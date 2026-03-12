@@ -106,6 +106,8 @@ class EnemyFactory:
             'block': 0,
             'vulnerable': 0,
             'is_vulnerable': 0,
+            'weak': 0,
+            'is_weak': 0,
             'ritual': 0,
             'curl': 0,
         }
@@ -163,6 +165,8 @@ class EnemyFactory:
         full_intent = EnemyFactory.empty_intent()
         full_intent.update(intent)
         enemy.update(full_intent)
+        if enemy.get('is_weak', 0) == 1:
+            enemy['intentDamage'] = int(enemy.get('intentDamage', 0) * .75)
 
     # -- Internal helpers ----------------------------------------------------
 

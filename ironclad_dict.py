@@ -74,7 +74,40 @@ CARD_LIBRARY = {
         "target_all": 0,
         "target_self": 0,
         "special": {}
+    },
+
+    "Clothesline": {
+        "type": TYPE_ATTACK,
+        "cost": 2,
+        "damage": 12,
+        "block": 0,
+        "self_hp_change": 0,
+        "vulnerable": 0,
+        "weak": 2,
+        "draw": 0,
+        "attack_num": 1,
+        "target_single": 1,
+        "target_all": 0,
+        "target_self": 0,
+        "special": {}
+    },
+
+    "Cleave": {
+        "type": TYPE_ATTACK,
+        "cost": 1,
+        "damage": 8,
+        "block": 0,
+        "self_hp_change": 0,
+        "vulnerable": 0,
+        "weak": 0,
+        "draw": 0,
+        "attack_num": 1,
+        "target_single": 0,
+        "target_all": 1,
+        "target_self": 0,
+        "special": {}
     }
+
 
 }
 

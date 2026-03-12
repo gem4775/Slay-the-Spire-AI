@@ -65,6 +65,11 @@ class GameLogic:
         if vector.get('vulnerable', 0) > 0:
             monster_state['vulnerable'] = monster_state.get('vulnerable', 0) + vector['vulnerable']
             monster_state['is_vulnerable'] = 1
+        if vector.get('weak', 0) > 0:
+            monster_state['weak'] = monster_state.get('weak', 0) + vector['weak']
+            if monster_state['is_weak'] == 0:
+                monster_state["intentDamage"] = int(monster_state.get("intentDamage", 0) * .75)
+            monster_state['is_weak'] = 1
 
         monster_state['block'] = monster_state.get('block', 0) - damage
         if monster_state['block'] < 0:
@@ -115,6 +120,9 @@ class GameLogic:
             if e.get('vulnerable', 0) > 0:
                 e['vulnerable'] -= 1
                 e['is_vulnerable'] = 1 if e['vulnerable'] > 0 else 0
+            if e.get('weak', 0) > 0:
+                e['weak'] -= 1
+                e['is_weak'] = 1 if e['weak'] > 0 else 0
 
             e['block'] = 0
 
@@ -146,7 +154,7 @@ class GameLogic:
     def encode_enemy(enemy):
         """Encode a single enemy into a fixed-size feature vector."""
         if enemy.get('hp', 0) <= 0:
-            return [0.0] * 14  # dead enemy — all zeros
+            return [0.0] * 16  # dead enemy — all zeros
 
         return [
             enemy.get('hp', 0) / (enemy.get('max_hp', 40) + 1),
@@ -156,6 +164,8 @@ class GameLogic:
             enemy.get('vulnerable', 0) / 5,
             enemy.get('intentHits', 0) / 1,
             enemy.get('is_vulnerable', 0),
+            enemy.get('weak', 0) / 5,
+            enemy.get('is_weak', 0),
             1.0 if enemy.get('intent') == 'ATTACK' else 0.0,
             enemy.get('block_gain', 0) / 10,
             enemy.get('strength_gain', 0) / 5,
@@ -256,13 +266,15 @@ class GameLogic:
         DAMAGE_REWARD = 1.0
         BLOCK_REWARD = 0.2
         VULNERABLE_REWARD = 2.0
-        DAMAGE_TAKEN_PENALTY = 1.0
+        DAMAGE_TAKEN_PENALTY = 2.0
         WASTED_ENERGY_PENALTY = 3.0
         VULNERABLE_WASTE_PENALTY = 3.0
         WASTED_BLOCK_PENALTY = 10.0
         WIN_REWARD = 50
         LOSS_PENALTY = 50
         ENEMY_SURVIVED_TURN_PENALTY = 1.0
+        WEAK_REWARD = 2.0
+        WEAK_WASTE_PENALTY = 1.0
 
         end_turn_action = 10 * max_enemies + 10
 
@@ -319,6 +331,23 @@ class GameLogic:
             elif vuln_before >= 2:
                 reward -= VULNERABLE_WASTE_PENALTY
             elif vuln_before == 1:
+                reward += 1.0
+
+        # Weak handling
+        if card_data and card_data.get('weak', 0) > 0 and first_live:
+            action_type, card_idx, enemy_idx = GameLogic.decode_action(action, max_enemies)
+            if action_type == 'single' and enemy_idx < len(enemies_before):
+                target_before = enemies_before[enemy_idx]
+            else:
+                target_before = first_live
+
+            weak_before = target_before.get('weak', 0)
+
+            if weak_before == 0:
+                reward += WEAK_REWARD * card_data['weak']
+            elif weak_before >= 2:
+                reward -= WEAK_WASTE_PENALTY
+            elif weak_before == 1:
                 reward += 1.0
 
         # Block handling — penalize harder when enemy is in kill range
