@@ -106,6 +106,38 @@ CARD_LIBRARY = {
         "target_all": 1,
         "target_self": 0,
         "special": {}
+    },
+
+    "Thunderclap": {
+        "type": TYPE_ATTACK,
+        "cost": 1,
+        "damage": 4,
+        "block": 0,
+        "self_hp_change": 0,
+        "vulnerable": 1,
+        "weak": 0,
+        "draw": 0,
+        "attack_num": 1,
+        "target_single": 0,
+        "target_all": 1,
+        "target_self": 0,
+        "special": {}
+    },
+
+    "Twin Strike": {
+        "type": TYPE_ATTACK,
+        "cost": 1,
+        "damage": 5,
+        "block": 0,
+        "self_hp_change": 0,
+        "vulnerable": 0,
+        "weak": 0,
+        "draw": 0,
+        "attack_num": 2,
+        "target_single": 1,
+        "target_all": 0,
+        "target_self": 0,
+        "special": {}
     }
 
 

@@ -57,33 +57,30 @@ class GameLogic:
     @staticmethod
     def apply_card_monster(player_state, monster_state, vector):
         # Calculate damage first, THEN apply vulnerable modifier
-        damage = vector['damage']
-        if monster_state.get('vulnerable', 0) > 0:
-            damage = int(damage * 1.5)
+        hits = vector.get('attack_num', 1)
+        for _ in range(hits):
+            damage = vector['damage']
+            if monster_state.get('vulnerable', 0) > 0:
+                damage = int(damage * 1.5)
 
-        # Apply vulnerable debuff from the card
-        if vector.get('vulnerable', 0) > 0:
-            monster_state['vulnerable'] = monster_state.get('vulnerable', 0) + vector['vulnerable']
-            monster_state['is_vulnerable'] = 1
-        if vector.get('weak', 0) > 0:
-            monster_state['weak'] = monster_state.get('weak', 0) + vector['weak']
-            if monster_state['is_weak'] == 0:
-                monster_state["intentDamage"] = int(monster_state.get("intentDamage", 0) * .75)
-            monster_state['is_weak'] = 1
-
-        monster_state['block'] = monster_state.get('block', 0) - damage
-        if monster_state['block'] < 0:
-            damage = abs(monster_state['block'])
-            monster_state['block'] = 0
-        else:
-            damage = 0
-        monster_state['hp'] = monster_state['hp'] - damage
-        monster_state['hp'] = max(0, monster_state['hp'])
+            monster_state['block'] = monster_state.get('block', 0) - damage
+            if monster_state['block'] < 0:
+                damage = abs(monster_state['block'])
+                monster_state['block'] = 0
+            else:
+                damage = 0
+            monster_state['hp'] = monster_state['hp'] - damage
+            monster_state['hp'] = max(0, monster_state['hp'])
 
         # Curl: taking an attack triggers block gain (e.g. Red Louse)
         if vector.get('type') == 0 and monster_state.get('curl', 0) > 0:
             monster_state['block'] = monster_state['curl']
             monster_state['curl'] = 0
+
+        if vector.get('type') == 1 and monster_state.get('enrage', 0) > 0:
+            monster_state['strength'] = monster_state['strength'] + monster_state['enrage']
+            if monster_state['intent'] == 'ATTACK':
+                monster_state['intentDamage'] = monster_state.get('intentDamage', 0) + monster_state['enrage']
 
         return monster_state
 
@@ -264,12 +261,12 @@ class GameLogic:
         reward = 0
 
         DAMAGE_REWARD = 1.0
-        BLOCK_REWARD = 0.2
+        BLOCK_REWARD = 0.4
         VULNERABLE_REWARD = 2.0
         DAMAGE_TAKEN_PENALTY = 2.0
         WASTED_ENERGY_PENALTY = 3.0
         VULNERABLE_WASTE_PENALTY = 3.0
-        WASTED_BLOCK_PENALTY = 10.0
+        WASTED_BLOCK_PENALTY = 15.0
         WIN_REWARD = 50
         LOSS_PENALTY = 50
         ENEMY_SURVIVED_TURN_PENALTY = 1.0

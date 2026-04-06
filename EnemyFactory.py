@@ -7,7 +7,7 @@ import random
 # Fields mirror the intent keys used throughout GameLogic/train.
 # ---------------------------------------------------------------------------
 
-def attack(damage, hits=1, block_gain=0, strength_gain=0, ritual_gain=0):
+def attack(damage, hits=1, block_gain=0, strength_gain=0, ritual_gain=0, enrage_gain=0, vulnerable=0):
     return {
         'intent': 'ATTACK',
         'intentDamage': damage,
@@ -15,9 +15,11 @@ def attack(damage, hits=1, block_gain=0, strength_gain=0, ritual_gain=0):
         'block_gain': block_gain,
         'strength_gain': strength_gain,
         'ritual_gain': ritual_gain,
+        'enrage': enrage_gain,
+        'vulnerable': vulnerable
     }
 
-def buff(strength_gain=0, ritual_gain=0, block_gain=0):
+def buff(strength_gain=0, ritual_gain=0, block_gain=0, enrage_gain=0,  vulnerable=0):
     return {
         'intent': 'OTHER',
         'intentDamage': 0,
@@ -25,6 +27,8 @@ def buff(strength_gain=0, ritual_gain=0, block_gain=0):
         'block_gain': block_gain,
         'strength_gain': strength_gain,
         'ritual_gain': ritual_gain,
+        'enrage': enrage_gain,
+        'vulnerable': vulnerable
     }
 
 
@@ -74,6 +78,17 @@ ENEMY_REGISTRY = {
             (25, lambda e: buff(strength_gain=3)),
         ],
     },
+
+    'Gremlin Nob': {
+        'hp': (82, 86),
+        'stats': {},
+        'move_pattern': 'random',
+        'moves': [
+            (67, lambda e: attack(14 + e.get('strength', 0))),
+            (33, lambda e: attack(6 + e.get('strength', 0), vulnerable=2)),
+        ],
+        'first_move': lambda e: buff(enrage_gain=2),
+    },
 }
 
 
@@ -94,6 +109,8 @@ class EnemyFactory:
             'block_gain': 0,
             'strength_gain': 0,
             'ritual_gain': 0,
+            'enrage_gain': 0,
+            'vulnerable': 0,
         }
 
     @staticmethod
@@ -110,6 +127,7 @@ class EnemyFactory:
             'is_weak': 0,
             'ritual': 0,
             'curl': 0,
+            'enrage': 0,
         }
 
     @staticmethod
