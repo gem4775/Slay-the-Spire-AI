@@ -257,7 +257,7 @@ def _describe_action(action, vector, enemies):
         return f"Play {card_name} (AoE/self) [card={card_idx}] (action {action})"
 
 
-def play_trained_agent(Think=False, agent=None):
+def play_trained_agent(think=False, agent=None):
     if agent is None:
         agent = DQNAgent(state_dim=DIMENSIONS, action_dim=ACTION_DIM)
         agent.policy_net.load_state_dict(torch.load("trained_model.pth"))
@@ -286,7 +286,7 @@ def play_trained_agent(Think=False, agent=None):
     done = False
     step_num = 0
 
-    if Think:
+    if think:
         print("=" * 60)
         print("GAME START")
         print("=" * 60)
@@ -297,7 +297,7 @@ def play_trained_agent(Think=False, agent=None):
         print()
 
     while not done:
-        if Think:
+        if think:
             print(f"\n--- Step {step_num} ---")
             print(f"Player: HP={vector['player_hp']}, Block={vector['block']}, Energy={vector['energy']}")
             for i, e in enumerate(enemies):
@@ -307,7 +307,7 @@ def play_trained_agent(Think=False, agent=None):
 
         legal_actions = GameLogic.get_legal_actions(vector, enemies)
 
-        if Think:
+        if think:
             with torch.no_grad():
                 state_t = torch.FloatTensor(state).unsqueeze(0)
                 q_values = agent.policy_net(state_t).squeeze().numpy()
@@ -321,7 +321,7 @@ def play_trained_agent(Think=False, agent=None):
 
         action = agent.select_action(state, legal_actions)
 
-        if Think:
+        if think:
             print(f">>> Agent chose: {_describe_action(action, vector, enemies)}")
             action_type, card_idx, enemy_idx = GameLogic.decode_action(action, MAX_MONSTERS)
             if action_type in ('single', 'multi') and card_idx < len(vector['hand']):
@@ -331,7 +331,7 @@ def play_trained_agent(Think=False, agent=None):
         next_vector, next_enemies, reward, done = GameLogic.step(vector, enemies, action)
         next_state = GameLogic.encode_state(next_vector, next_enemies, next_vector['hand'])
 
-        if Think:
+        if think:
             print(f"Reward: {reward:.2f}")
 
         state = next_state
@@ -339,7 +339,7 @@ def play_trained_agent(Think=False, agent=None):
         enemies = next_enemies
         step_num += 1
 
-    if Think:
+    if think:
         print("\n" + "=" * 60)
         if vector['player_hp'] > 0:
             print("AGENT WON!")
@@ -376,7 +376,7 @@ def eval_all_checkpoints(num_rounds=100):
 
         hp_results = []
         for _ in range(num_rounds):
-            hp_results.append(play_trained_agent(Think=False, agent=agent))
+            hp_results.append(play_trained_agent(think=False, agent=agent))
 
         wins = sum(1 for h in hp_results if h > 0)
         avg_damage = 50 - average(hp_results)
